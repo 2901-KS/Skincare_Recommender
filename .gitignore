@@ -1,0 +1,17 @@
+# Ignore Python virtual environment
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore large datasets
+data/
+
+# Ignore trained model weights
+models/*.pth
+models/*.pt
+
+# OS generated files
+.DS_Store
+Thumbs.db
