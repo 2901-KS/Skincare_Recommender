@@ -1,52 +1,114 @@
 import os
+import shutil
+import random
 from PIL import Image
 from torch.utils.data import Dataset
 import torchvision.transforms as T
-import pandas as pd
 
-def get_transforms(train=True):
+# -----------------------------
+# IMAGE TRANSFORMS
+# -----------------------------
+def get_transforms(train):
     if train:
         return T.Compose([
-            T.Resize((256,256)),
-            T.RandomResizedCrop(224, scale=(0.8,1.0)),
+            T.Resize((224, 224)),
             T.RandomHorizontalFlip(),
-            T.ColorJitter(0.1,0.1,0.05,0.02),
+            T.RandomRotation(10),
             T.ToTensor(),
-            T.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225])
         ])
     else:
         return T.Compose([
-            T.Resize((224,224)),
+            T.Resize((224, 224)),
             T.ToTensor(),
-            T.Normalize([0.485,0.456,0.406],[0.229,0.224,0.225])
         ])
 
+# -----------------------------
+# GENERIC IMAGEFOLDER DATASET
+# -----------------------------
 class ImageFolderDataset(Dataset):
-    def __init__(self, root=None, csv_path=None, split="train", transform=None):
-        self.transform = transform or get_transforms(train=(split=="train"))
-        self.items = []
+    def __init__(self, root, split, transform=None):
+        self.transform = transform
+        self.root = os.path.join(root, split)
 
-        if csv_path:
-            df = pd.read_csv(csv_path)
-            for _, r in df.iterrows():
-                img = r["image_path"]
-                label = int(r["label"])
-                self.items.append((img, label))
+        self.classes = sorted([
+            d for d in os.listdir(self.root)
+            if os.path.isdir(os.path.join(self.root, d))
+        ])
 
-        else:
-            split_dir = os.path.join(root, split)
-            classes = sorted([d for d in os.listdir(split_dir) if os.path.isdir(os.path.join(split_dir,d))])
-            class_to_idx = {c:i for i,c in enumerate(classes)}
+        self.img_paths = []
+        self.labels = []
 
-            for c in classes:
-                folder = os.path.join(split_dir, c)
-                for f in os.listdir(folder):
-                    if f.lower().endswith(("jpg","jpeg","png")):
-                        self.items.append((os.path.join(folder,f), class_to_idx[c]))
+        for idx, cls in enumerate(self.classes):
+            folder = os.path.join(self.root, cls)
+            for f in os.listdir(folder):
+                if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                    self.img_paths.append(os.path.join(folder, f))
+                    self.labels.append(idx)
 
-    def __len__(self): return len(self.items)
+        print(f"Loaded {len(self.img_paths)} images for {split}")
+
+    def __len__(self):
+        return len(self.img_paths)
 
     def __getitem__(self, idx):
-        path, label = self.items[idx]
-        img = Image.open(path).convert("RGB")
-        return self.transform(img), label
+        img = Image.open(self.img_paths[idx]).convert("RGB")
+        if self.transform:
+            img = self.transform(img)
+        return img, self.labels[idx]
+
+# -----------------------------
+# ACNE DATASET PREPARATION
+# -----------------------------
+def prepare_acne_dataset():
+    ROOT = "data/acne"
+    IMG_DIR = os.path.join(ROOT, "JPEGImages")
+    TRAIN_DIR = os.path.join(ROOT, "train")
+    VAL_DIR = os.path.join(ROOT, "val")
+
+    print("Preparing ACNE dataset...")
+
+    if os.path.exists(TRAIN_DIR):
+        shutil.rmtree(TRAIN_DIR)
+    if os.path.exists(VAL_DIR):
+        shutil.rmtree(VAL_DIR)
+
+    for cls in ["level0", "level1", "level2", "level3"]:
+        os.makedirs(os.path.join(TRAIN_DIR, cls), exist_ok=True)
+        os.makedirs(os.path.join(VAL_DIR, cls), exist_ok=True)
+
+    images = [
+        f for f in os.listdir(IMG_DIR)
+        if f.lower().endswith((".jpg", ".jpeg", ".png"))
+    ]
+
+    if len(images) == 0:
+        print("❌ ERROR: No images found in JPEGImages!")
+        return
+
+    counts = {"level0": 0, "level1": 0, "level2": 0, "level3": 0}
+
+    for img in images:
+        name = img.lower()
+
+        if "level0" in name:
+            cls = "level0"
+        elif "level1" in name:
+            cls = "level1"
+        elif "level2" in name:
+            cls = "level2"
+        elif "level3" in name:
+            cls = "level3"
+        else:
+            print("Skipping unrecognized:", img)
+            continue
+
+        dest_root = TRAIN_DIR if random.random() < 0.85 else VAL_DIR
+        shutil.copy(os.path.join(IMG_DIR, img), os.path.join(dest_root, cls))
+        counts[cls] += 1
+
+    print("✨ Dataset prepared successfully!")
+    print("Counts:", counts)
+
+
+if __name__ == "__main__":
+    prepare_acne_dataset()
