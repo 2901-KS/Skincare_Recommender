@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skincare Recommender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+
+        .content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .product-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .product-card p {
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .image-upload {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .image-upload:hover {
+            background: #f5f5ff;
+        }
+
+        .image-preview {
+            max-width: 300px;
+            margin: 20px auto;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .image-preview.show {
+            display: block;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌸 Skincare Recommender</h1>
+            <p>AI-Powered Personalized Skincare Solutions</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('predict')">Product Prediction</div>
+            <div class="tab" onclick="switchTab('regimen')">Skincare Regimen</div>
+            <div class="tab" onclick="switchTab('ingredients')">Ingredient Check</div>
+            <div class="tab" onclick="switchTab('compare')">Compare Products</div>
+        </div>
+
+        <div class="content">
+            <!-- Predict Tab -->
+            <div id="predict" class="tab-content active">
+                <h2>Get Product Recommendations</h2>
+                <p style="margin-bottom: 20px; color: #666;">Upload your photo and provide skin details for personalized recommendations</p>
+                
+                <form id="predictForm">
+                    <div class="form-group">
+                        <label>Upload Your Photo *</label>
+                        <input type="file" id="predictImage" accept="image/*" required style="display: none;">
+                        <div class="image-upload" onclick="document.getElementById('predictImage').click()">
+                            <p>📷 Click to upload image</p>
+                            <p class="info-text">Supported: JPG, PNG</p>
+                        </div>
+                        <img id="predictPreview" class="image-preview" alt="Preview">
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="predictSensitive">
+                        <label for="predictSensitive" style="margin: 0;">I have sensitive skin</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Budget (Optional)</label>
+                        <input type="number" id="predictBudget" placeholder="Enter your budget">
+                        <p class="info-text">Leave empty for all price ranges</p>
+                    </div>
+
+                    <button type="submit" class="btn">Get Recommendations</button>
+                </form>
+
+                <div class="loading" id="predictLoading">🔄 Analyzing your skin...</div>
+                <div class="error" id="predictError"></div>
+                <div class="results" id="predictResults"></div>
+            </div>
+
+            <!-- Regimen Tab -->
+            <div id="regimen" class="tab-content">
+                <h2>Create Your Skincare Regimen</h2>
+                <p style="margin-bottom: 20px; color: #666;">Get a complete daily skincare routine tailored to your needs</p>
+                
+                <form id="regimenForm">
+                    <div class="form-group">
+                        <label>Upload Your Photo *</label>
+                        <input type="file" id="regimenImage" accept="image/*" required style="display: none;">
+                        <div class="image-upload" onclick="document.getElementById('regimenImage').click()">
+                            <p>📷 Click to upload image</p>
+                            <p class="info-text">Supported: JPG, PNG</p>
+                        </div>
+                        <img id="regimenPreview" class="image-preview" alt="Preview">
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="regimenSensitive">
+                        <label for="regimenSensitive" style="margin: 0;">I have sensitive skin</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Budget (Optional)</label>
+                        <input type="number" id="regimenBudget" placeholder="Enter your budget">
+                    </div>
+
+                    <button type="submit" class="btn">Generate Regimen</button>
+                </form>
+
+                <div class="loading" id="regimenLoading">🔄 Creating your regimen...</div>
+                <div class="error" id="regimenError"></div>
+                <div class="results" id="regimenResults"></div>
+            </div>
+
+            <!-- Ingredients Tab -->
+            <div id="ingredients" class="tab-content">
+                <h2>Check Product Ingredients</h2>
+                <p style="margin-bottom: 20px; color: #666;">Analyze ingredients compatibility with your skin</p>
+                
+                <form id="ingredientsForm">
+                    <div class="form-group">
+                        <label>Product Ingredients *</label>
+                        <textarea id="ingredientsList" placeholder="Enter ingredients (comma separated)" required></textarea>
+                        <p class="info-text">Example: Hyaluronic Acid, Vitamin C, Niacinamide</p>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Acne Level * (0-3)</label>
+                            <select id="acneLevel" required>
+                                <option value="">Select level</option>
+                                <option value="0">0 - No acne</option>
+                                <option value="1">1 - Mild</option>
+                                <option value="2">2 - Moderate</option>
+                                <option value="3">3 - Severe</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Skin Type * (0-4)</label>
+                            <select id="skinType" required>
+                                <option value="">Select type</option>
+                                <option value="0">0 - Dry</option>
+                                <option value="1">1 - Normal</option>
+                                <option value="2">2 - Oily</option>
+                                <option value="3">3 - Combination</option>
+                                <option value="4">4 - Sensitive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Skin Tone * (0-5)</label>
+                        <select id="skinTone" required>
+                            <option value="">Select tone</option>
+                            <option value="0">0 - Very Fair</option>
+                            <option value="1">1 - Fair</option>
+                            <option value="2">2 - Light</option>
+                            <option value="3">3 - Medium</option>
+                            <option value="4">4 - Tan</option>
+                            <option value="5">5 - Deep</option>
+                        </select>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="ingredientsSensitive">
+                        <label for="ingredientsSensitive" style="margin: 0;">I have sensitive skin</label>
+                    </div>
+
+                    <button type="submit" class="btn">Check Ingredients</button>
+                </form>
+
+                <div class="loading" id="ingredientsLoading">🔄 Analyzing ingredients...</div>
+                <div class="error" id="ingredientsError"></div>
+                <div class="results" id="ingredientsResults"></div>
+            </div>
+
+            <!-- Compare Tab -->
+            <div id="compare" class="tab-content">
+                <h2>Compare Products</h2>
+                <p style="margin-bottom: 20px; color: #666;">Compare two products based on your skin profile</p>
+                
+                <form id="compareForm">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Product 1 *</label>
+                            <input type="text" id="product1" placeholder="Enter product name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Product 2 *</label>
+                            <input type="text" id="product2" placeholder="Enter product name" required>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Acne Level * (0-3)</label>
+                            <select id="compareAcne" required>
+                                <option value="">Select level</option>
+                                <option value="0">0 - No acne</option>
+                                <option value="1">1 - Mild</option>
+                                <option value="2">2 - Moderate</option>
+                                <option value="3">3 - Severe</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Skin Type * (0-4)</label>
+                            <select id="compareSkinType" required>
+                                <option value="">Select type</option>
+                                <option value="0">0 - Dry</option>
+                                <option value="1">1 - Normal</option>
+                                <option value="2">2 - Oily</option>
+                                <option value="3">3 - Combination</option>
+                                <option value="4">4 - Sensitive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Skin Tone * (0-5)</label>
+                        <select id="compareTone" required>
+                            <option value="">Select tone</option>
+                            <option value="0">0 - Very Fair</option>
+                            <option value="1">1 - Fair</option>
+                            <option value="2">2 - Light</option>
+                            <option value="3">3 - Medium</option>
+                            <option value="4">4 - Tan</option>
+                            <option value="5">5 - Deep</option>
+                        </select>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="compareSensitive">
+                        <label for="compareSensitive" style="margin: 0;">I have sensitive skin</label>
+                    </div>
+
+                    <button type="submit" class="btn">Compare Products</button>
+                </form>
+
+                <div class="loading" id="compareLoading">🔄 Comparing products...</div>
+                <div class="error" id="compareError"></div>
+                <div class="results" id="compareResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - UPDATE THIS WITH YOUR API URL
+        const API_BASE_URL = 'http://localhost:8000'; // Change to your FastAPI backend URL
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Image preview handlers
+        function setupImagePreview(inputId, previewId) {
+            document.getElementById(inputId).addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById(previewId);
+                        preview.src = e.target.result;
+                        preview.classList.add('show');
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        setupImagePreview('predictImage', 'predictPreview');
+        setupImagePreview('regimenImage', 'regimenPreview');
+
+        // Predict Form
+        document.getElementById('predictForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.getElementById('predictLoading');
+            const error = document.getElementById('predictError');
+            const results = document.getElementById('predictResults');
+            
+            loading.classList.add('show');
+            error.classList.remove('show');
+            results.classList.remove('show');
+
+            try {
+                const formData = new FormData();
+                formData.append('img', document.getElementById('predictImage').files[0]);
+                formData.append('sensitive', document.getElementById('predictSensitive').checked);
+                
+                const budget = document.getElementById('predictBudget').value;
+                if (budget) formData.append('budget', budget);
+
+                const response = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Failed to get recommendations');
+
+                const data = await response.json();
+                displayPredictResults(data);
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.add('show');
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+
+        // Regimen Form
+        document.getElementById('regimenForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.getElementById('regimenLoading');
+            const error = document.getElementById('regimenError');
+            const results = document.getElementById('regimenResults');
+            
+            loading.classList.add('show');
+            error.classList.remove('show');
+            results.classList.remove('show');
+
+            try {
+                const formData = new FormData();
+                formData.append('img', document.getElementById('regimenImage').files[0]);
+                formData.append('sensitive', document.getElementById('regimenSensitive').checked);
+                
+                const budget = document.getElementById('regimenBudget').value;
+                if (budget) formData.append('budget', budget);
+
+                const response = await fetch(`${API_BASE_URL}/regimen`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Failed to generate regimen');
+
+                const data = await response.json();
+                displayRegimenResults(data);
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.add('show');
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+
+        // Ingredients Form
+        document.getElementById('ingredientsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.getElementById('ingredientsLoading');
+            const error = document.getElementById('ingredientsError');
+            const results = document.getElementById('ingredientsResults');
+            
+            loading.classList.add('show');
+            error.classList.remove('show');
+            results.classList.remove('show');
+
+            try {
+                const data = {
+                    ingredients: document.getElementById('ingredientsList').value,
+                    acne_level: parseInt(document.getElementById('acneLevel').value),
+                    skin_type: parseInt(document.getElementById('skinType').value),
+                    skin_tone: parseInt(document.getElementById('skinTone').value),
+                    sensitive: document.getElementById('ingredientsSensitive').checked
+                };
+
+                const response = await fetch(`${API_BASE_URL}/ingredient-check`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) throw new Error('Failed to check ingredients');
+
+                const result = await response.json();
+                displayIngredientsResults(result);
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.add('show');
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+
+        // Compare Form
+        document.getElementById('compareForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.getElementById('compareLoading');
+            const error = document.getElementById('compareError');
+            const results = document.getElementById('compareResults');
+            
+            loading.classList.add('show');
+            error.classList.remove('show');
+            results.classList.remove('show');
+
+            try {
+                const data = {
+                    product1: document.getElementById('product1').value,
+                    product2: document.getElementById('product2').value,
+                    acne_level: parseInt(document.getElementById('compareAcne').value),
+                    skin_type: parseInt(document.getElementById('compareSkinType').value),
+                    skin_tone: parseInt(document.getElementById('compareTone').value),
+                    sensitive: document.getElementById('compareSensitive').checked
+                };
+
+                const response = await fetch(`${API_BASE_URL}/compare-products`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) throw new Error('Failed to compare products');
+
+                const result = await response.json();
+                displayCompareResults(result);
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.add('show');
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+
+        // Display functions
+        function displayPredictResults(data) {
+            const results = document.getElementById('predictResults');
+            results.innerHTML = '<h3>Recommended Products</h3>';
+            
+            if (data.recommendations && data.recommendations.length > 0) {
+                data.recommendations.forEach(product => {
+                    results.innerHTML += `
+                        <div class="product-card">
+                            <h4>${product.name || 'Product'}</h4>
+                            <p><strong>Category:</strong> ${product.category || 'N/A'}</p>
+                            <p><strong>Price:</strong> ${product.price ? '$' + product.price : 'N/A'}</p>
+                            <p><strong>Match Score:</strong> ${product.score ? (product.score * 100).toFixed(1) + '%' : 'N/A'}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                results.innerHTML += '<p>No recommendations found. Please try adjusting your criteria.</p>';
+            }
+            
+            results.classList.add('show');
+        }
+
+        function displayRegimenResults(data) {
+            const results = document.getElementById('regimenResults');
+            results.innerHTML = '<h3>Your Personalized Skincare Regimen</h3>';
+            
+            if (data.morning || data.evening) {
+                if (data.morning) {
+                    results.innerHTML += '<h4>🌅 Morning Routine</h4>';
+                    data.morning.forEach((product, idx) => {
+                        results.innerHTML += `
+                            <div class="product-card">
+                                <h4>Step ${idx + 1}: ${product.name || 'Product'}</h4>
+                                <p><strong>Type:</strong> ${product.type || 'N/A'}</p>
+                                <p><strong>Instructions:</strong> ${product.instructions || 'Apply as directed'}</p>
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (data.evening) {
+                    results.innerHTML += '<h4>🌙 Evening Routine</h4>';
+                    data.evening.forEach((product, idx) => {
+                        results.innerHTML += `
+                            <div class="product-card">
+                                <h4>Step ${idx + 1}: ${product.name || 'Product'}</h4>
+                                <p><strong>Type:</strong> ${product.type || 'N/A'}</p>
+                                <p><strong>Instructions:</strong> ${product.instructions || 'Apply as directed'}</p>
+                            </div>
+                        `;
+                    });
+                }
+            } else {
+                results.innerHTML += '<p>Unable to generate regimen. Please try again.</p>';
+            }
+            
+            results.classList.add('show');
+        }
+
+        function displayIngredientsResults(data) {
+            const results = document.getElementById('ingredientsResults');
+            results.innerHTML = '<h3>Ingredient Analysis</h3>';
+            
+            results.innerHTML += `
+                <div class="product-card">
+                    <h4>Compatibility: ${data.safe ? '✅ Safe' : '⚠️ Caution Advised'}</h4>
+                    <p><strong>Analysis:</strong> ${data.message || 'Ingredients analyzed'}</p>
+                    ${data.concerns ? `<p><strong>Concerns:</strong> ${data.concerns}</p>` : ''}
+                    ${data.recommendations ? `<p><strong>Recommendations:</strong> ${data.recommendations}</p>` : ''}
+                </div>
+            `;
+            
+            results.classList.add('show');
+        }
+
+        function displayCompareResults(data) {
+            const results = document.getElementById('compareResults');
+            results.innerHTML = '<h3>Product Comparison</h3>';
+            
+            results.innerHTML += `
+                <div class="product-card">
+                    <h4>🏆 Winner: ${data.winner || 'Tie'}</h4>
+                    <p><strong>Reason:</strong> ${data.reason || 'Both products are suitable'}</p>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="product-card">
+                        <h4>${data.product1_name || 'Product 1'}</h4>
+                        <p><strong>Score:</strong> ${data.product1_score ? (data.product1_score * 100).toFixed(1) + '%' : 'N/A'}</p>
+                        <p><strong>Pros:</strong> ${data.product1_pros || 'N/A'}</p>
+                        <p><strong>Cons:</strong> ${data.product1_cons || 'N/A'}</p>
+                    </div>
+                    
+                    <div class="product-card">
+                        <h4>${data.product2_name || 'Product 2'}</h4>
+                        <p><strong>Score:</strong> ${data.product2_score ? (data.product2_score * 100).toFixed(1) + '%' : 'N/A'}</p>
+                        <p><strong>Pros:</strong> ${data.product2_pros || 'N/A'}</p>
+                        <p><strong>Cons:</strong> ${data.product2_cons || 'N/A'}</p>
+                    </div>
+                </div>
+            `;
+            
+            results.classList.add('show');
+        }
+    </script>
+</body>
+</html>
