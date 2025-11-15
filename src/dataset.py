@@ -5,60 +5,75 @@ from PIL import Image
 from torch.utils.data import Dataset
 import torchvision.transforms as T
 
-# -----------------------------
-# IMAGE TRANSFORMS
-# -----------------------------
-def get_transforms(train):
+# --------------------------------------------------
+# 1️⃣ IMAGE TRANSFORMS (BETTER for ALL datasets)
+# --------------------------------------------------
+def get_transforms(train=True):
+    """
+    - Strong augmentation for train
+    - Soft preprocessing for val/test
+    - Skin-friendly normalization
+    """
     if train:
         return T.Compose([
-            T.Resize((224, 224)),
+            T.Resize((256, 256)),
+            T.RandomResizedCrop(224, scale=(0.7, 1.0)),
             T.RandomHorizontalFlip(),
-            T.RandomRotation(10),
+            T.RandomRotation(15),
+            T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
             T.ToTensor(),
+            T.Normalize(mean=[0.55, 0.45, 0.40], std=[0.25, 0.25, 0.25])
         ])
     else:
         return T.Compose([
-            T.Resize((224, 224)),
+            T.Resize((256, 256)),
+            T.CenterCrop(224),
             T.ToTensor(),
+            T.Normalize(mean=[0.55, 0.45, 0.40], std=[0.25, 0.25, 0.25])
         ])
 
-# -----------------------------
-# GENERIC IMAGEFOLDER DATASET
-# -----------------------------
+# --------------------------------------------------
+# 2️⃣ GENERIC IMAGE FOLDER DATASET 
+# (Works for Acne, Skin Type, Skin Tone)
+# --------------------------------------------------
 class ImageFolderDataset(Dataset):
-    def __init__(self, root, split, transform=None):
+    def __init__(self, root_dir, split="train", transform=None):
+        """
+        root_dir: e.g. data/acne or data/skin_type
+        split: 'train', 'val', 'valid', 'test'
+        """
+        self.root = os.path.join(root_dir, split)
         self.transform = transform
-        self.root = os.path.join(root, split)
+        self.samples = []
 
-        self.classes = sorted([
+        # all classes inside split folder
+        classes = sorted([
             d for d in os.listdir(self.root)
             if os.path.isdir(os.path.join(self.root, d))
         ])
+        self.class_to_idx = {cls: idx for idx, cls in enumerate(classes)}
 
-        self.img_paths = []
-        self.labels = []
-
-        for idx, cls in enumerate(self.classes):
-            folder = os.path.join(self.root, cls)
-            for f in os.listdir(folder):
+        for cls in classes:
+            cls_folder = os.path.join(self.root, cls)
+            for f in os.listdir(cls_folder):
                 if f.lower().endswith((".jpg", ".jpeg", ".png")):
-                    self.img_paths.append(os.path.join(folder, f))
-                    self.labels.append(idx)
+                    self.samples.append((os.path.join(cls_folder, f), self.class_to_idx[cls]))
 
-        print(f"Loaded {len(self.img_paths)} images for {split}")
+        print(f"Loaded {len(self.samples)} images for {split}")
 
     def __len__(self):
-        return len(self.img_paths)
+        return len(self.samples)
 
     def __getitem__(self, idx):
-        img = Image.open(self.img_paths[idx]).convert("RGB")
+        path, label = self.samples[idx]
+        img = Image.open(path).convert("RGB")
         if self.transform:
             img = self.transform(img)
-        return img, self.labels[idx]
+        return img, label
 
-# -----------------------------
-# ACNE DATASET PREPARATION
-# -----------------------------
+# --------------------------------------------------
+# 3️⃣ ACNE DATASET PREPARATION
+# --------------------------------------------------
 def prepare_acne_dataset():
     ROOT = "data/acne"
     IMG_DIR = os.path.join(ROOT, "JPEGImages")
@@ -67,11 +82,13 @@ def prepare_acne_dataset():
 
     print("Preparing ACNE dataset...")
 
+    # clear old structure
     if os.path.exists(TRAIN_DIR):
         shutil.rmtree(TRAIN_DIR)
     if os.path.exists(VAL_DIR):
         shutil.rmtree(VAL_DIR)
 
+    # create class folders
     for cls in ["level0", "level1", "level2", "level3"]:
         os.makedirs(os.path.join(TRAIN_DIR, cls), exist_ok=True)
         os.makedirs(os.path.join(VAL_DIR, cls), exist_ok=True)
@@ -102,11 +119,11 @@ def prepare_acne_dataset():
             print("Skipping unrecognized:", img)
             continue
 
-        dest_root = TRAIN_DIR if random.random() < 0.85 else VAL_DIR
-        shutil.copy(os.path.join(IMG_DIR, img), os.path.join(dest_root, cls))
+        dest = TRAIN_DIR if random.random() < 0.85 else VAL_DIR
+        shutil.copy(os.path.join(IMG_DIR, img), os.path.join(dest, cls))
         counts[cls] += 1
 
-    print("✨ Dataset prepared successfully!")
+    print("✨ ACNE dataset prepared successfully!")
     print("Counts:", counts)
 
 
