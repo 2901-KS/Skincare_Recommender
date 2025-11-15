@@ -1,0 +1,53 @@
+<!doctype html>
+<html><head>
+  <meta charset="utf-8"><title>Results — DoMy Skincare</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+</head><body>
+  <div class="container">
+    <a href="recommend.html" class="small">← Back</a>
+    <h2 class="h1">Recommended Products</h2>
+
+    <div id="profile" class="card small" style="margin-bottom:12px"></div>
+
+    <div id="products" class="result-list"></div>
+
+    <div class="footer">These are AI suggestions—always patch test first.</div>
+  </div>
+
+  <script>
+    const raw = localStorage.getItem("recommend_data");
+    if(!raw) {
+      document.body.innerHTML = '<div class="container"><p>No results found. Go back and run analysis.</p></div>';
+    } else {
+      const data = JSON.parse(raw);
+      const profile = data.predictions || {};
+      const rec = data.recommendations || {};
+      const profileBox = document.getElementById("profile");
+      profileBox.innerHTML = `<strong>Skin:</strong> ${profile.skin_type ?? profile.skin ?? 'N/A'} • Acne level: ${profile.acne_level ?? 'N/A'}`;
+
+      const list = (rec.recommendations && Array.isArray(rec.recommendations)) ? rec.recommendations : rec.recommendations ?? rec || [];
+      const products = document.getElementById("products");
+      if(list.length === 0) {
+        products.innerHTML = '<p class="small">No product recommendations found.</p>';
+      } else {
+        products.innerHTML = "";
+        list.forEach((p) => {
+          const el = document.createElement("div");
+          el.className = "product";
+          el.innerHTML = `
+            <div style="flex:1">
+              <div class="title">${p.name || p.product || 'Product'}</div>
+              <div class="small">${p.brand ? p.brand + ' • ' : ''}${p.primary_ingredient ? p.primary_ingredient : ''}</div>
+              <div class="small" style="margin-top:6px">${p.why_recommended || p.reason || ''}</div>
+            </div>
+            <div class="row">
+              <div class="badge">${p.price_in_inr??'₹'}</div>
+            </div>
+          `;
+          products.appendChild(el);
+        });
+      }
+    }
+  </script>
+</body></html>

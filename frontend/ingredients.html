@@ -1,0 +1,24 @@
+<!doctype html>
+<html><head>
+  <meta charset="utf-8"><title>Ingredient Checker</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+</head><body>
+  <div class="container">
+    <a href="index.html" class="small">← Home</a>
+    <h2 class="h1">Ingredient Checker</h2>
+
+    <div class="card">
+      <textarea id="ingredientText" rows="6" class="input" placeholder="Paste ingredient list, e.g. Water, Glycerin, Niacinamide..."></textarea>
+
+      <div class="form-row center" style="margin-top:10px">
+        <button id="checkBtn" class="btn">Analyze</button>
+      </div>
+
+      <div id="ingredientResult" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/ingredients.js"></script>
+</body></html>
