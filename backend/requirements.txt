@@ -9,3 +9,4 @@ requests
 beautifulsoup4
 pandas
 tqdm
+pip install groq python-dotenv
