@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Regimen — SkinCare AI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <a href="index.html" style="text-decoration:none; color:var(--muted)">← Back</a>
+    <section class="page" style="margin-top:12px;">
+      <h2>Skincare Regimen</h2>
+      <p class="small">Upload image to generate AM/PM routines.</p>
+
+      <form id="regimenForm">
+        <div class="form-row">
+          <label for="img">Image (required)</label>
+          <input class="input" id="img" name="img" type="file" accept="image/*" required />
+        </div>
+
+        <div class="form-row">
+          <label for="sensitive">Sensitive skin</label>
+          <select id="sensitive" name="sensitive" class="input">
+            <option value="false" selected>No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="budget">Budget (INR)</label>
+          <input id="budget" name="budget" class="input" type="number" min="0" placeholder="e.g. 300" />
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:12px;">
+          <button type="submit" class="btn btn-primary">Generate Regimen</button>
+          <button type="reset" class="btn btn-ghost">Reset</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const form = document.getElementById('regimenForm');
+
+    form.addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      const fd = new FormData();
+      const file = document.getElementById('img').files[0];
+      if(!file){ showMessage('Image is required'); return; }
+      fd.append('img', file);
+      fd.append('sensitive', document.getElementById('sensitive').value);
+      const budget = document.getElementById('budget').value;
+      if(budget) fd.append('budget', budget);
+
+      try {
+        showMessage('Contacting API...');
+        const res = await fetch(BASE_URL + '/regimen', { method: 'POST', body: fd });
+        const data = await res.json();
+        if(!res.ok){ showMessage('API error'); return; }
+        storeAndNavigate('regimen_response', data, 'regimen-result.html');
+      } catch(err) {
+        showMessage('Request failed: ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

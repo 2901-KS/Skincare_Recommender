@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Regimen Result — SkinCare AI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <a href="regimen.html" style="text-decoration:none; color:var(--muted)">← Back to Regimen</a>
+    <section class="page" style="margin-top:12px;">
+      <h2>Regimen</h2>
+      <div id="content"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const content = document.getElementById('content');
+    const raw = sessionStorage.getItem('regimen_response');
+    if(!raw){
+      content.innerHTML = '<div class="result-card">No response found. Go back and submit the form.</div>';
+    } else {
+      const obj = JSON.parse(raw);
+      // Profile
+      const profile = (obj.regimen && obj.regimen.profile) || obj.profile || obj.regimen;
+      if(profile){
+        const pcard = document.createElement('div'); pcard.className='result-card';
+        pcard.innerHTML = '<h3>Skin Profile</h3>';
+        for(const k in profile){
+          const row = document.createElement('div'); row.className='kv';
+          row.innerHTML = `<b>${k}</b><div>${profile[k]}</div>`;
+          pcard.appendChild(row);
+        }
+        content.appendChild(pcard);
+      }
+
+      // AM routine
+      const am = (obj.regimen && obj.regimen.am_routine) || obj.am_routine || [];
+      if(Array.isArray(am) && am.length){
+        const amc = document.createElement('div'); amc.className='result-card';
+        amc.innerHTML = '<h3>AM Routine</h3>';
+        am.forEach(step=>{
+          const s = document.createElement('div'); s.style.marginBottom='12px';
+          s.innerHTML = `<b>Step ${step.step}: ${step.name}</b><div class="small">${step.what_to_use || ''}</div><div style="margin-top:6px">${step.why || ''}</div>`;
+          amc.appendChild(s);
+        });
+        content.appendChild(amc);
+      }
+
+      // PM routine
+      const pm = (obj.regimen && obj.regimen.pm_routine) || obj.pm_routine || [];
+      if(Array.isArray(pm) && pm.length){
+        const pmc = document.createElement('div'); pmc.className='result-card';
+        pmc.innerHTML = '<h3>PM Routine</h3>';
+        pm.forEach(step=>{
+          const s = document.createElement('div'); s.style.marginBottom='12px';
+          s.innerHTML = `<b>Step ${step.step}: ${step.name}</b><div class="small">${step.what_to_use || ''}</div><div style="margin-top:6px">${step.why || ''}</div>`;
+          pmc.appendChild(s);
+        });
+        content.appendChild(pmc);
+      }
+
+      // fallback raw
+      if(!am.length && !pm.length){
+        const rawCard = document.createElement('div'); rawCard.className='result-card';
+        rawCard.innerHTML = '<h3>Raw response</h3>';
+        prettyJSON(rawCard, obj);
+        content.appendChild(rawCard);
+      }
+    }
+  </script>
+</body>
+</html>

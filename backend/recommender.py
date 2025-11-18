@@ -27,53 +27,83 @@ def predict_all(img_path):
     }
 
 
-def llm_recommend(acne_label, type_label, tone_label, sensitive, budget):
+def llm_recommend(acne_label, type_label, tone_label, sensitive):
     """
     Ask LLM to recommend products across markets (India, K-Beauty, US)
-    while respecting budget and sensitivity.
-    budget: integer INR (0 = no limit)
+    WITHOUT budget constraints.
     """
     sens_text = "Yes" if sensitive else "No"
-    budget_text = "No budget limit" if (not budget or budget <= 0) else f"Up to ₹{budget}"
 
-    # Allowed brands: Indian + K-beauty + US (model should prefer in-market availability)
     prompt = f"""
-You are a certified dermatologist + product recommender. Output EXACT JSON array only (no extra commentary).
+You are a certified dermatologist, cosmetic chemist, and global skincare reviewer.
+Your job is to recommend REAL skincare products across Indian, K-beauty, and US/global markets.
 
-Task:
-Recommend EXACTLY 8 real skincare products appropriate for the user profile below. Provide products across three markets where possible: (1) India brands, (2) K-beauty brands, (3) US/global brands. Prioritize Indian availability if budget is modest.
+🔥 OUTPUT REQUIREMENT:
+Return ONLY a valid JSON array of EXACTLY 8 product objects. No text outside JSON.
 
-Profile:
-- Acne severity: {acne_label}
-- Skin type: {type_label}
-- Fitzpatrick skin tone: {tone_label}
-- Sensitive skin: {sens_text}
-- Budget: {budget_text}
+──────────────────────────────────
+USER PROFILE
+──────────────────────────────────
+Acne severity: {acne_label}
+Skin type: {type_label}
+Fitzpatrick skin tone: {tone_label}
+Sensitive skin: {sens_text}
 
-Rules (VERY IMPORTANT):
-1. Return exactly a JSON array of 8 objects. Example format:
+──────────────────────────────────
+STRICT RULES (FOLLOW 100%)
+──────────────────────────────────
+1. Output ONLY valid JSON array:
 [
   {{
-    "name": "Product name",
-    "brand": "Brand",
-    "market": "india|k-beauty|us",
-    "price_in_inr": "₹X - ₹Y",
-    "primary_ingredient": "salicylic acid / niacinamide / hyaluronic acid / retinol / azelaic acid / etc.",
-    "why_recommended": "1-2 short sentences explaining suitability for this profile"
-  }}
+    "name": "",
+    "brand": "",
+    "market": "india | k-beauty | us",
+    "price_in_inr": "",
+    "primary_ingredient": "",
+    "why_recommended": ""
+  }},
+  ...
 ]
 
-2. Ensure products are REAL (available in India or globally). Prefer products that are actually sold in Indian stores or on Amazon.in / Nykaa / chemist sites.
-3. If sensitive = Yes, avoid recommending fragranced products and high concentration retinoids; prefer gentle formulations.
-4. If a budget is provided (e.g. ₹500), only include products that reasonably fit within that budget or include low-cost alternatives in the array. If budget is "no limit" choose a mix of budget + premium.
-5. For K-beauty items, mention market 'k-beauty'; for Indian brands use 'india'; for US/global use 'us'.
-6. Price ranges should be in INR. If exact INR price unknown, provide an approximate INR range.
-7. Output JSON only. No prose, no lists, no commentary.
+2. **NO repetition**:
+   - No product name repeats.
+   - No brand repeats.
+   - All 8 products must be unique.
 
-Now produce the JSON array (8 items).
+3. Product sources must be REAL:
+   - Products should exist in India, Korea, or global/US markets.
+   - No hallucinated items.
+
+4. Sensitive = Yes:
+   - Avoid fragrance-heavy products.
+   - Avoid essential oils, witch hazel, menthol, eucalyptus.
+   - Prefer gentle formulations.
+
+5. Acne rules:
+   - Use either salicylic acid OR benzoyl peroxide across all products, not both.
+   - Niacinamide, azelaic acid, and zinc are allowed.
+
+6. Skin tone safety:
+   - Fitzpatrick III+ → avoid strong glycolic acid, aggressive peels, or high-strength retinoids.
+
+7. Market tag rules:
+   - Indian brands → "india"
+   - Korean brands → "k-beauty"
+   - US/global → "us"
+
+8. Explanation:
+   - “why_recommended” must be 1–2 concise dermatologist sentences.
+
+──────────────────────────────────
+IMPORTANT
+──────────────────────────────────
+- IGNORE ALL BUDGET CONSTRAINTS.
+- Focus only on dermatologist-grade quality and profile suitability.
+- Keep JSON STRICT, CLEAN, and PARSEABLE.
+
+Now generate the JSON array of 8 products.
 """
 
-    # call Groq
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
@@ -84,13 +114,16 @@ Now produce the JSON array (8 items).
 
 
 def recommend_products(acne_level, skin_type, skin_tone, sensitive=False, budget=0):
+    """
+    Wrapper for FastAPI — budget kept for backward compatibility but NOT USED.
+    """
     acne_label = map_acne(acne_level)
     type_label = map_skin_type(skin_type)
     tone_label = map_skin_tone(skin_tone)
 
-    raw = llm_recommend(acne_label, type_label, tone_label, sensitive, budget)
+    raw = llm_recommend(acne_label, type_label, tone_label, sensitive)
 
-    # Try to parse JSON, fallback to raw string
+    # Parse JSON safely
     try:
         parsed = json.loads(raw)
         return {
@@ -98,21 +131,18 @@ def recommend_products(acne_level, skin_type, skin_tone, sensitive=False, budget
                 "acne": acne_label,
                 "skin_type": type_label,
                 "skin_tone": tone_label,
-                "sensitive": sensitive,
-                "budget": budget
+                "sensitive": sensitive
             },
             "recommendations": parsed
         }
     except Exception:
-        # If LLM returns some extra text or slightly invalid JSON, return raw with note
         return {
             "skin_profile": {
                 "acne": acne_label,
                 "skin_type": type_label,
                 "skin_tone": tone_label,
-                "sensitive": sensitive,
-                "budget": budget
+                "sensitive": sensitive
             },
             "recommendations": raw,
-            "warning": "Could not parse LLM JSON automatically — returned raw string. You can inspect and adjust prompt or parse manually."
+            "warning": "LLM returned non-JSON output. Inspect raw response."
         }

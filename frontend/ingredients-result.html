@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ingredient Result — SkinCare AI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <a href="ingredients.html" style="text-decoration:none; color:var(--muted)">← Back to Ingredient Checker</a>
+    <section class="page" style="margin-top:12px;">
+      <h2>Ingredient Analysis</h2>
+      <div id="content"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const content = document.getElementById('content');
+    const raw = sessionStorage.getItem('ingredients_response');
+    if(!raw){
+      content.innerHTML = '<div class="result-card">No response found. Submit the form first.</div>';
+    } else {
+      const obj = JSON.parse(raw);
+      const analysis = obj.analysis || obj || {};
+
+      // If backend returns parsed JSON in analysis.raw that contains JSON (sometimes your backend returns raw string)
+      if(typeof analysis === 'object' && analysis.raw && analysis.raw.includes('JSON')){
+        // fallback display raw text then show final parsed verdict if available
+      }
+
+      // try to show known fields
+      const card = document.createElement('div'); card.className='result-card';
+      card.innerHTML = '<h3>Verdict</h3>';
+      const safe = (analysis.safe !== undefined) ? analysis.safe : (obj.safe !== undefined ? obj.safe : null);
+      const verdict = safe === true ? 'Safe' : (safe === false ? 'Not Safe' : (obj.message || 'See analysis'));
+
+      const kv = document.createElement('div'); kv.className='kv';
+      kv.innerHTML = `<b>Verdict</b><div>${verdict}</div>`;
+      card.appendChild(kv);
+
+      if(analysis.good_ingredients && Array.isArray(analysis.good_ingredients)){
+        const g = document.createElement('div'); g.className='result-card';
+        g.innerHTML = '<h3>Good Ingredients</h3>';
+        analysis.good_ingredients.forEach(i=>{
+          const d = document.createElement('div'); d.textContent = i;
+          g.appendChild(d);
+        });
+        content.appendChild(g);
+      }
+
+      if(analysis.irritants && Array.isArray(analysis.irritants)){
+        const g = document.createElement('div'); g.className='result-card';
+        g.innerHTML = '<h3>Irritants / Harmful</h3>';
+        analysis.irritants.forEach(i=>{
+          const d = document.createElement('div'); d.textContent = i;
+          g.appendChild(d);
+        });
+        content.appendChild(g);
+      }
+
+      // if backend included raw text with "JSON parsing failed" (as screenshot), show the raw string too:
+      if(analysis.raw){
+        const rawCard = document.createElement('div'); rawCard.className='result-card';
+        rawCard.innerHTML = '<h3>Full Analysis (raw)</h3>';
+        const pre = document.createElement('pre'); pre.style.whiteSpace='pre-wrap';
+        pre.textContent = analysis.raw;
+        rawCard.appendChild(pre);
+        content.appendChild(rawCard);
+      }
+
+      // fallback: show whole response if nothing displayed
+      if(!analysis.good_ingredients && !analysis.irritants && !analysis.raw){
+        const rawCard = document.createElement('div'); rawCard.className='result-card';
+        rawCard.innerHTML = '<h3>Raw response</h3>';
+        prettyJSON(rawCard, obj);
+        content.appendChild(rawCard);
+      } else {
+        // add verdict card last
+        content.prepend(card);
+      }
+    }
+  </script>
+</body>
+</html>

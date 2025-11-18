@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Compare Result — SkinCare AI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <a href="compare.html" style="text-decoration:none; color:var(--muted)">← Back to Compare</a>
+    <section class="page" style="margin-top:12px;">
+      <h2>Comparison Result</h2>
+      <div id="content"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const content = document.getElementById('content');
+    const raw = sessionStorage.getItem('compare_response');
+    if(!raw){
+      content.innerHTML = '<div class="result-card">No response found. Submit the form first.</div>';
+    } else {
+      const obj = JSON.parse(raw);
+      // typical fields: better_product, why_better, product1_pros, product1_cons, product2_pros, product2_cons, final_recommendation
+      const card = document.createElement('div'); card.className='result-card';
+      card.innerHTML = '<h3>Summary</h3>';
+      const better = obj.comparison?.better_product || obj.better_product || obj.comparison?.best || null;
+      const why = obj.comparison?.why_better || obj.why_better || obj.comparison?.why || obj.why;
+      if(better) card.appendChild(Object.assign(document.createElement('div'), { innerHTML: `<b>Better Product</b><div>${better}</div>` }));
+      if(why) card.appendChild(Object.assign(document.createElement('div'), { innerHTML: `<div class="small" style="margin-top:8px">${why}</div>` }));
+
+      content.appendChild(card);
+
+      // pros and cons
+      ['product1_pros','product1_cons','product2_pros','product2_cons'].forEach(k=>{
+        const arr = obj.comparison?.[k] || obj[k];
+        if(Array.isArray(arr)){
+          const rc = document.createElement('div'); rc.className='result-card';
+          rc.innerHTML = `<h3>${k.replace(/_/g,' ').toUpperCase()}</h3>`;
+          arr.forEach(a=> { const d = document.createElement('div'); d.textContent = a; rc.appendChild(d); });
+          content.appendChild(rc);
+        }
+      });
+
+      // final recommendation
+      const final = obj.comparison?.final_recommendation || obj.final_recommendation || obj.final;
+      if(final){
+        const f = document.createElement('div'); f.className='result-card';
+        f.innerHTML = `<h3>Final Recommendation</h3><div>${final}</div>`;
+        content.appendChild(f);
+      }
+
+      // fallback: show raw response
+      if(!better && !why && !final){
+        const rawCard = document.createElement('div'); rawCard.className='result-card';
+        rawCard.innerHTML = '<h3>Raw response</h3>';
+        prettyJSON(rawCard, obj);
+        content.appendChild(rawCard);
+      }
+    }
+  </script>
+</body>
+</html>

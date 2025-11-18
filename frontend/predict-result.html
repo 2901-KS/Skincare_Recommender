@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Predict Result — SkinCare AI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <a href="predict.html" style="text-decoration:none; color:var(--muted)">← Back to Predict</a>
+    <section class="page" style="margin-top:12px;">
+      <h2>Prediction & Recommendations</h2>
+      <div id="content"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const content = document.getElementById('content');
+    const raw = sessionStorage.getItem('predict_response');
+    if(!raw){
+      content.innerHTML = '<div class="result-card">No response found. Go back and submit the form.</div>';
+    } else {
+      const obj = JSON.parse(raw);
+      // show predictions
+      const predCard = document.createElement('div');
+      predCard.className = 'result-card';
+      predCard.innerHTML = '<h3>Predictions</h3>';
+      const pred = obj.predictions || obj.prediction || {};
+      for(const k in pred){
+        const row = document.createElement('div'); row.className = 'kv';
+        row.innerHTML = `<b>${k}</b><div>${pred[k]}</div>`;
+        predCard.appendChild(row);
+      }
+      content.appendChild(predCard);
+
+      // recommendations list
+      if(obj.recommendations && Array.isArray(obj.recommendations)){
+        const rec = document.createElement('div'); rec.className = 'result-card';
+        rec.innerHTML = '<h3>Recommended Products</h3>';
+        obj.recommendations.forEach(p => {
+          const item = document.createElement('div');
+          item.style.marginBottom = '10px';
+          item.innerHTML = `<b>${p.name}</b> <div class="small">${p.brand || ''} • ${p.price_in_inr || ''}</div>
+            <div style="margin-top:6px">${p.why_recommended || p.why || ''}</div>`;
+          rec.appendChild(item);
+        });
+        content.appendChild(rec);
+      } else {
+        // if nested structure {recommendations: {skin_profile: ..., recommendations: [...]}}
+        if(obj.recommendations && typeof obj.recommendations === 'object' && Array.isArray(obj.recommendations.recommendations)){
+          const rec = document.createElement('div'); rec.className = 'result-card';
+          rec.innerHTML = '<h3>Recommended Products</h3>';
+          obj.recommendations.recommendations.forEach(p => {
+            const item = document.createElement('div');
+            item.style.marginBottom = '10px';
+            item.innerHTML = `<b>${p.name}</b> <div class="small">${p.brand || ''} • ${p.price_in_inr || ''}</div>
+              <div style="margin-top:6px">${p.why_recommended || p.why || ''}</div>`;
+            rec.appendChild(item);
+          });
+          content.appendChild(rec);
+        } else {
+          // fallback: show raw JSON
+          const rawCard = document.createElement('div'); rawCard.className='result-card';
+          rawCard.innerHTML = '<h3>Raw response</h3>';
+          prettyJSON(rawCard, obj);
+          content.appendChild(rawCard);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

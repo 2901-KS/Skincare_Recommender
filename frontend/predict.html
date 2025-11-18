@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Predict — SkinCare AI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <a href="index.html" style="text-decoration:none; color:var(--muted)">← Back</a>
+    <section class="page" style="margin-top:12px;">
+      <h2>Skin Analysis + Recommendation</h2>
+      <p class="small">Upload a face image. The backend predicts skin & recommends products.</p>
+
+      <form id="predictForm">
+        <div class="form-row">
+          <label for="img">Image (required)</label>
+          <input class="input" id="img" name="img" type="file" accept="image/*" required />
+        </div>
+
+        <div class="form-row">
+          <label for="sensitive">Sensitive skin</label>
+          <select id="sensitive" name="sensitive" class="input">
+            <option value="false" selected>No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:12px;">
+          <button type="submit" class="btn btn-primary">Get Recommendation</button>
+          <button type="reset" class="btn btn-ghost">Reset</button>
+        </div>
+      </form>
+
+      <div id="preview" style="margin-top:12px"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const form = document.getElementById('predictForm');
+    const preview = document.getElementById('preview');
+
+    // show image preview
+    document.getElementById('img').addEventListener('change', (e)=>{
+      preview.innerHTML = '';
+      const f = e.target.files[0];
+      if(!f) return;
+      const img = document.createElement('img');
+      img.style.maxWidth = '220px';
+      img.style.borderRadius = '12px';
+      img.style.marginTop = '8px';
+      img.src = URL.createObjectURL(f);
+      preview.appendChild(img);
+    });
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const fd = new FormData();
+      const file = document.getElementById('img').files[0];
+      if(!file){ showMessage('Image is required'); return; }
+      fd.append('img', file);
+      fd.append('sensitive', document.getElementById('sensitive').value);
+      const budget = document.getElementById('budget').value;
+      if(budget) fd.append('budget', budget);
+
+      try {
+        showMessage('Contacting API...');
+        const res = await fetch(BASE_URL + '/predict', {
+          method: 'POST',
+          body: fd
+        });
+        const data = await res.json();
+        if(!res.ok) {
+          showMessage('API error: ' + (data?.message || res.statusText));
+          prettyJSON(document.createElement('div'), data);
+          return;
+        }
+        storeAndNavigate('predict_response', data, 'predict-result.html');
+      } catch(err) {
+        showMessage('Request failed: ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>
